@@ -42,7 +42,9 @@ jobs:
           restore-keys: buildozer-${{ runner.os }}-
 
       - name: Build APK
-        run: yes | buildozer -v android debug 2>&1 | tee build.log
+        run: |
+          set -o pipefail
+          buildozer -v android debug 2>&1 | tee build.log
         env:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
 
@@ -52,9 +54,10 @@ jobs:
           name: gym-register-apk
           path: bin/*.apk
           retention-days: 30
+          if-no-files-found: error
 
-      - name: Upload build log (on failure)
-        if: failure()
+      - name: Upload build log (always, so errors are visible)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: build-log
