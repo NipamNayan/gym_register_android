@@ -7,14 +7,14 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5.6.0
         with:
           python-version: "3.11"
 
@@ -31,19 +31,19 @@ jobs:
         run: pip install buildozer==1.5.0 cython==3.0.11
 
       - name: Cache Android SDK/NDK (speeds up future builds)
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.3
         with:
           path: |
             ~/.buildozer/android/platform/android-sdk
             ~/.buildozer/android/platform/android-ndk-r25b
-          key: android-sdk-ndk-${{ runner.os }}
+          key: android-sdk-ndk-${{ runner.os }}-v1
 
       - name: Build APK
         run: buildozer -v android debug
         working-directory: ${{ github.workspace }}
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: gym-register-apk
           path: bin/*.apk
