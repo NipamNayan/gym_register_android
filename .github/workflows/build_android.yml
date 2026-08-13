@@ -1,0 +1,50 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:   # allows manual trigger from GitHub UI
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3-pip git zip unzip openjdk-17-jdk \
+            autoconf libtool pkg-config zlib1g-dev libncurses5-dev \
+            libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev \
+            build-essential libltdl-dev
+
+      - name: Install Buildozer and Cython
+        run: pip install buildozer==1.5.0 cython==3.0.11
+
+      - name: Cache Android SDK/NDK (speeds up future builds)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.buildozer/android/platform/android-sdk
+            ~/.buildozer/android/platform/android-ndk-r25b
+          key: android-sdk-ndk-${{ runner.os }}
+
+      - name: Build APK
+        run: buildozer -v android debug
+        working-directory: ${{ github.workspace }}
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gym-register-apk
+          path: bin/*.apk
+          retention-days: 30
