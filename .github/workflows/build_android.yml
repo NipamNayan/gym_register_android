@@ -3,20 +3,22 @@ name: Build Android APK
 on:
   push:
     branches: [main, master]
-  workflow_dispatch:   # allows manual trigger from GitHub UI
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    # ubuntu-22.04 required: libtinfo5 was removed in ubuntu-24.04
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5.6.0
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          # 3.10 has the most stable buildozer/p4a recipe compatibility
+          python-version: "3.10"
 
       - name: Install system dependencies
         run: |
@@ -25,26 +27,36 @@ jobs:
             python3-pip git zip unzip openjdk-17-jdk \
             autoconf libtool pkg-config zlib1g-dev libncurses5-dev \
             libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev \
-            build-essential libltdl-dev
+            build-essential libltdl-dev ccache
 
       - name: Install Buildozer and Cython
-        run: pip install buildozer==1.5.0 cython==3.0.11
+        run: |
+          pip install --upgrade pip
+          pip install buildozer cython
 
-      - name: Cache Android SDK/NDK (speeds up future builds)
-        uses: actions/cache@v4.2.3
+      - name: Cache ~/.buildozer (SDK, NDK, and recipes)
+        uses: actions/cache@v4
         with:
-          path: |
-            ~/.buildozer/android/platform/android-sdk
-            ~/.buildozer/android/platform/android-ndk-r25b
-          key: android-sdk-ndk-${{ runner.os }}-v1
+          path: ~/.buildozer
+          key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+          restore-keys: buildozer-${{ runner.os }}-
 
       - name: Build APK
-        run: buildozer -v android debug
-        working-directory: ${{ github.workspace }}
+        run: yes | buildozer -v android debug 2>&1 | tee build.log
+        env:
+          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4.6.2
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
           name: gym-register-apk
           path: bin/*.apk
           retention-days: 30
+
+      - name: Upload build log (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+          retention-days: 7
