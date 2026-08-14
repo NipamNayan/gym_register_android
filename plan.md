@@ -1,5 +1,93 @@
 # Gym Registration — Android App Plan
 
+---
+
+## How This App Was Created (Full Journey)
+
+### Step 1 — Analysed the original desktop app
+
+The original app (`gym_register/`) was built with:
+- `tkinter` for the UI (desktop only, won't run on Android)
+- `sqlite3` for local storage
+- `pandas` + `openpyxl` for Excel export
+
+Since tkinter is desktop-only, a full UI rewrite was needed for Android.
+
+### Step 2 — Chose the tech stack
+
+| Need | Choice | Reason |
+|---|---|---|
+| Mobile UI | Kivy + KivyMD | Python-native, runs on Android/iOS/Desktop |
+| Database | SQLite3 (built-in) | Same as desktop, no extra dependency |
+| CSV export | Python `csv` module | Built-in, no pip package needed on Android |
+| APK build | Buildozer | Standard Python-to-Android tool |
+| CI/CD | GitHub Actions | Free Linux runners — Buildozer needs Linux |
+
+### Step 3 — Wrote `database.py`
+
+Ported the desktop database logic with two key changes:
+- Auto-detects Android storage path (`android.storage.app_storage_path`) vs desktop path
+- Removed `pandas` dependency (not needed for CSV; use stdlib `csv` instead)
+- Added `export_to_csv()` method (saves to `/sdcard/Download/` on Android)
+
+### Step 4 — Wrote `main.py` (Kivy UI)
+
+Three screens built with KV language + Python:
+- `HomeScreen` — tabbed list (All / Active / Expired) + search bar + CSV export buttons
+- `AddEditScreen` — form with date picker + period quick-select buttons (1/3/6/12 months)
+- `DetailScreen` — read-only customer card + edit shortcut
+
+App class (`GymApp`) handles all navigation and database calls.
+
+### Step 5 — Wrote `buildozer.spec`
+
+Key settings that matter:
+```ini
+requirements = kivy==2.3.0,kivymd==1.2.0,pillow
+android.api = 33
+android.minapi = 21
+android.archs = arm64-v8a, armeabi-v7a
+android.accept_sdk_license = True
+android.permissions = WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,MANAGE_EXTERNAL_STORAGE
+```
+
+> **What NOT to put in requirements:** `python3` and `sqlite3` are runtime builtins,
+> not pip packages. Listing them causes buildozer to fail trying to `pip install` them.
+
+### Step 6 — Set up GitHub Actions (because Buildozer needs Linux)
+
+Docker was installed on the Mac but the Docker daemon wasn't running.
+Rather than requiring Docker Desktop to be open manually every time, GitHub Actions
+was used — it spins up a free Ubuntu 22.04 runner automatically on every push.
+
+Workflow file: `.github/workflows/build_android.yml`
+
+Key decisions in the workflow:
+- `ubuntu-22.04` not `ubuntu-24.04` — `libtinfo5` was removed in 24.04, breaking buildozer
+- `python-version: "3.10"` not 3.11 — better python-for-android recipe compatibility
+- `yes | buildozer` — auto-accepts any interactive prompts during build
+- Cache `~/.buildozer` keyed on `buildozer.spec` hash — avoids re-downloading SDK/NDK
+- On failure: upload `build.log` as artifact so errors are visible without sign-in
+
+### Step 7 — Fixed two failed builds
+
+**Run #1 failed** — `requirements = python3,kivy==2.3.0,kivymd==1.2.0,sqlite3`
+- `python3` and `sqlite3` are not pip packages → buildozer crashed trying to install them
+
+**Run #2 failed in 13 seconds** — pinned action versions that don't exist as Git tags
+(`@v4.2.2`, `@v4.2.3`, `@v4.6.2`, `@v5.6.0`) → GitHub couldn't resolve the actions
+
+**Run #3** — both fixed, build progresses correctly.
+
+### Step 8 — Downloading and installing the APK
+
+Once GitHub Actions shows a green checkmark:
+1. Actions tab → click the run → scroll to **Artifacts**
+2. Download `gym-register-apk.zip` → unzip → get `.apk`
+3. Install via `adb install` (USB) or copy to phone and tap
+
+---
+
 ## Project Structure
 
 ```
@@ -164,7 +252,8 @@ apksigner sign --ks gym_release.keystore bin/gymregister-1.0-release-unsigned.ap
 | Offline SQLite database | ✅ |
 | Date picker | ✅ |
 | Period quick-select (1/3/6/12 months) | ✅ |
-| Excel export | ❌ (no file dialog on Android — can add later) |
+| CSV export (All / Active / Expired) | ✅ (saved to Downloads) |
+| Excel export | ❌ (no file dialog on Android) |
 
 ---
 
