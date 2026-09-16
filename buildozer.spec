@@ -19,15 +19,14 @@ version = 1.0
 # --------------------------------------------------
 # Python / Kivy dependencies
 # --------------------------------------------------
-requirements = python3,kivy==2.3.0,kivymd==1.2.0,pillow
+requirements = python3,kivy==2.3.0,kivymd==1.2.0,pillow,sqlite3
 
 
 # --------------------------------------------------
 # Python-for-Android
 # --------------------------------------------------
-# Using default stable p4a release bundled with buildozer
-# p4a.fork = kivy
-# p4a.branch = master
+# Pin to stable release branch (uses Python 3.11.5 and Kivy 2.3.0)
+p4a.branch = release-2024.01.21
 
 
 # --------------------------------------------------
