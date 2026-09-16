@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+*.db
+.buildozer/
+bin/
+.DS_Store
+buildozer.log
+
