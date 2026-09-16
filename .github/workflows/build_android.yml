@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
       # --------------------------------------------------
@@ -19,123 +19,14 @@ jobs:
         uses: actions/checkout@v4
 
       # --------------------------------------------------
-      # Python 3.12
+      # Build APK using containerized Buildozer
       # --------------------------------------------------
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+      - name: Build APK with Buildozer
+        uses: ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
         with:
-          python-version: "3.12"
-
-      # --------------------------------------------------
-      # Java 17
-      # --------------------------------------------------
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      # --------------------------------------------------
-      # System dependencies required by Buildozer
-      # --------------------------------------------------
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-
-          sudo apt-get install -y \
-            git \
-            zip \
-            unzip \
-            autoconf \
-            automake \
-            libtool \
-            pkg-config \
-            zlib1g-dev \
-            libncurses5-dev \
-            libncursesw5-dev \
-            libtinfo5 \
-            cmake \
-            libffi-dev \
-            libssl-dev \
-            gettext \
-            autopoint
-
-      # --------------------------------------------------
-      # Install Buildozer
-      # --------------------------------------------------
-      - name: Install Buildozer
-        run: |
-          python -m pip install --upgrade pip
-
-          python -m pip install \
-            "buildozer @ git+https://github.com/kivy/buildozer.git@master" \
-            "cython==0.29.34" \
-            setuptools \
-            virtualenv
-
-      # --------------------------------------------------
-      # Verify environment
-      # --------------------------------------------------
-      - name: Verify environment
-        run: |
-          echo "=============================="
-          echo "Python"
-          echo "=============================="
-          python --version
-
-          echo "=============================="
-          echo "Buildozer"
-          echo "=============================="
-          buildozer --version
-
-          echo "=============================="
-          echo "Cython"
-          echo "=============================="
-          cython --version
-
-          echo "=============================="
-          echo "Java"
-          echo "=============================="
-          java -version
-
-          echo "=============================="
-          echo "Project"
-          echo "=============================="
-          pwd
-          ls -la
-
-          echo "=============================="
-          echo "Buildozer spec"
-          echo "=============================="
-          test -f buildozer.spec
-          cat buildozer.spec
-
-      # --------------------------------------------------
-      # Build APK
-      # --------------------------------------------------
-      - name: Build APK
-        run: |
-          set -eux
-
-          buildozer -v android debug
-
-      # --------------------------------------------------
-      # Find APK
-      # --------------------------------------------------
-      - name: Find generated APK
-        if: always()
-        run: |
-          echo "=============================="
-          echo "APK files"
-          echo "=============================="
-
-          find . -type f -name "*.apk" -print || true
-
-          echo "=============================="
-          echo "AAB files"
-          echo "=============================="
-
-          find . -type f -name "*.aab" -print || true
+          command: buildozer android debug
+          buildozer_version: master
 
       # --------------------------------------------------
       # Upload APK
@@ -145,7 +36,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: gym-register-apk
-          path: "**/*.apk"
+          path: ${{ steps.buildozer.outputs.filename }}
           if-no-files-found: error
           retention-days: 30
 

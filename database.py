@@ -4,15 +4,24 @@ import datetime
 
 
 class Database:
-    def __init__(self):
-        # On Android, use app's user data directory; on desktop use local dir
-        try:
-            from android.storage import app_storage_path  # noqa: F401
-            storage = app_storage_path()
-        except ImportError:
-            storage = os.path.dirname(os.path.abspath(__file__))
+    def __init__(self, db_path=None):
+        if db_path:
+            self.db_path = db_path
+        else:
+            # On Android, use app's user data directory; on desktop use local dir
+            try:
+                from android.storage import app_storage_path  # noqa: F401
+                storage = app_storage_path()
+            except ImportError:
+                storage = os.path.dirname(os.path.abspath(__file__))
 
-        self.db_path = os.path.join(storage, "gym_database.db")
+            try:
+                os.makedirs(storage, exist_ok=True)
+            except OSError:
+                storage = os.path.expanduser("~")
+
+            self.db_path = os.path.join(storage, "gym_database.db")
+
         self.conn = None
         self._connect()
         self._create_tables()

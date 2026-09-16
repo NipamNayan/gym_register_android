@@ -25,8 +25,9 @@ requirements = python3,kivy==2.3.0,kivymd==1.2.0,pillow
 # --------------------------------------------------
 # Python-for-Android
 # --------------------------------------------------
-p4a.fork = kivy
-p4a.branch = master
+# Using default stable p4a release bundled with buildozer
+# p4a.fork = kivy
+# p4a.branch = master
 
 
 # --------------------------------------------------
@@ -57,7 +58,7 @@ android.archs = arm64-v8a,armeabi-v7a
 # --------------------------------------------------
 # Android permissions
 # --------------------------------------------------
-android.permissions = INTERNET
+android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
 
 
 # --------------------------------------------------
