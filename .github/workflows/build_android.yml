@@ -35,6 +35,13 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Configure Java 17 system-wide
+        run: |
+          sudo update-alternatives --set java /usr/lib/jvm/temurin-17-jdk-amd64/bin/java 2>/dev/null || true
+          sudo update-alternatives --set javac /usr/lib/jvm/temurin-17-jdk-amd64/bin/javac 2>/dev/null || true
+          echo "JAVA_HOME=$JAVA_HOME"
+          java -version
+
       # --------------------------------------------------
       # System dependencies required by Buildozer
       # --------------------------------------------------
@@ -61,7 +68,30 @@ jobs:
       # --------------------------------------------------
       - name: Build APK with Buildozer
         run: |
-          yes | buildozer -v android debug
+          yes | buildozer -v android debug 2>&1 | tee buildozer.log
+          exit "${PIPESTATUS[0]}"
+        shell: bash
+
+      # --------------------------------------------------
+      # Print failure log tail
+      # --------------------------------------------------
+      - name: Print failure log tail
+        if: failure()
+        run: |
+          echo "====================== BUILD LOG TAIL ======================"
+          tail -n 250 buildozer.log || true
+          echo "============================================================"
+
+      # --------------------------------------------------
+      # Upload full build log
+      # --------------------------------------------------
+      - name: Upload full build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildozer-log
+          path: buildozer.log
+          if-no-files-found: warn
 
       # --------------------------------------------------
       # Upload APK
