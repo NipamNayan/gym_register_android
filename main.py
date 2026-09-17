@@ -4,7 +4,24 @@ Offline, SQLite-backed, no internet required.
 """
 
 import os
+import sys
 import datetime
+import traceback
+
+# --- Crash logger for Android debugging ---
+def _setup_crash_log():
+    """Redirect stderr to a crash log file on Android so we can diagnose failures."""
+    try:
+        from android.storage import app_storage_path
+        log_dir = app_storage_path()
+        if log_dir:
+            crash_log = os.path.join(log_dir, "crash.log")
+            sys.stderr = open(crash_log, "w")
+    except Exception:
+        pass
+
+_setup_crash_log()
+
 from database import Database
 
 from kivy.lang import Builder
@@ -306,7 +323,7 @@ class GymApp(MDApp):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.db = Database()
+        self.db = None                 # created in on_start() after Android activity is ready
         self._editing_id = None        # None = add mode, int = edit mode
         self._current_customer = None  # for detail screen
         self._delete_dialog = None
@@ -323,10 +340,16 @@ class GymApp(MDApp):
         return Builder.load_string(KV)
 
     def on_start(self):
-        self.refresh_lists()
+        try:
+            self.db = Database()
+            self.refresh_lists()
+        except Exception as e:
+            traceback.print_exc()
+            Snackbar(text=f"DB Error: {e}").open()
 
     def on_stop(self):
-        self.db.close()
+        if self.db:
+            self.db.close()
 
     # ------------------------------------------------------------------
     # Navigation helpers

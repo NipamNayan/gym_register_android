@@ -8,23 +8,44 @@ class Database:
         if db_path:
             self.db_path = db_path
         else:
-            # On Android, use app's user data directory; on desktop use local dir
-            try:
-                from android.storage import app_storage_path  # noqa: F401
-                storage = app_storage_path()
-            except ImportError:
-                storage = os.path.dirname(os.path.abspath(__file__))
-
-            try:
-                os.makedirs(storage, exist_ok=True)
-            except OSError:
-                storage = os.path.expanduser("~")
-
+            storage = self._get_storage_dir()
             self.db_path = os.path.join(storage, "gym_database.db")
 
         self.conn = None
         self._connect()
         self._create_tables()
+
+    @staticmethod
+    def _get_storage_dir():
+        """Return a writable directory, trying Android-specific paths first."""
+        # 1) Try Android app private storage
+        try:
+            from android.storage import app_storage_path
+            path = app_storage_path()
+            if path:
+                os.makedirs(path, exist_ok=True)
+                return path
+        except Exception:
+            pass
+
+        # 2) Try Kivy's user_data_dir (works on both Android and desktop)
+        try:
+            from kivy.app import App
+            app = App.get_running_app()
+            if app and hasattr(app, 'user_data_dir'):
+                path = app.user_data_dir
+                os.makedirs(path, exist_ok=True)
+                return path
+        except Exception:
+            pass
+
+        # 3) Fallback: directory of this script (desktop)
+        try:
+            path = os.path.dirname(os.path.abspath(__file__))
+            os.makedirs(path, exist_ok=True)
+            return path
+        except OSError:
+            return os.path.expanduser("~")
 
     def _connect(self):
         self.conn = sqlite3.connect(self.db_path)
